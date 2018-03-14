@@ -1,8 +1,8 @@
+import inspect
 import socket
 import threading
 import os
-import telnetlib
-
+import time
 
 Server_IP = socket.gethostbyname(socket.gethostname())
 Server_Port = 8000
@@ -14,8 +14,8 @@ class FTPserverThread (threading.Thread):
     def __init__(self, (connection,addr)):
         self.connection = connection
         self.addr = addr
-        #self.basewd = currdir #dont really know what this line does
-        #self.cwd = self.basewd #dont know whats going on here
+        self.basewd = currdir
+        self.cwd = self.basewd
         self.rest = False
         self.pasv_mode = False
         threading.Thread.__init__(self)
@@ -48,12 +48,31 @@ class FTPserverThread (threading.Thread):
             self.connection.send('250 OK \n')
         else:
             self.connection.send('550 No such file, directory \n')
+
+    def LIST(self, cmd):
+        self.connection.send('150 Directory listing')
+        print 'List:', self.cwd
+        self.start_datasock()
+        for t in os.listdir(self.cwd):
+            k=self.toListItem(os.path.join(self.cwd,t))
+            self.datasock.send(k + '\r\n')
+        self.stop_datasock()
+        self.connection.send('226 Directory sent OK .\r\n')
+
+    def toListItem(self, fn):
+        st = os.stat(fn)
+        fullmode = 'rwxrwrwx'
+        mode = ''
+        for i in range (9):
+            mode += ((st.st_mode>>(8-i))&1) and fullmode[i] or '-'
+        d = (os.path.isdir(fn)) and 'd' or '-'
+        ftime = time.strftime(' %b %d %H:%M ', time.gmtime(st.st_mtime))
+        return d + mode + ' 1 user group ' + str(st.st_size) + ftime + os.path.basename(fn)
+
     def CDUP(self, ):
         if not os.path.samefile(self.cwd, self.basewd):
             self.cwd = os.path.abs(os.path.join(self.cwd, '..'))
         self.connection.send('200 OK \n')
-
-    def MOUNT(self, ):
 
     def PWD(self, cmd):
         cwd = os.path.relpath(self.cmd,self.basewd)
@@ -67,6 +86,10 @@ class FTPserverThread (threading.Thread):
         if self.pasv_mode:
             self.servsock
             self.pasv_mode = False
+        l=cmd[5:].split(',')
+        self.dataAddr = '.'.join(l[:4])
+        self.dataPort = (int(l[4])<<8)+int(l[5])
+        self.connection.send('200 Get Port .\r\n')
 
     def PASV(self, cmd):
         self.pasv_mode = True
@@ -75,6 +98,51 @@ class FTPserverThread (threading.Thread):
         self.servsock.listen(1)
         ip, port = self.servsock
 
+    def RETR(self, cmd):
+        filePath = os.path.join(self.cwd, cmd[5:-2])
+        if self.mode == 'I'
+            fileRead = open(filePath, 'rb')
+        else:
+            fileRead = open(filePath, 'r')
+        self.connection.send('150 Opening data connection .\r\n')
+        self.datasock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.datasock.connect((self.dataAddr, self.dataPort))
+        data = fileRead(1024)
+        while data:
+            self.datasock.send(data)
+            data = fileRead.read(1024)
+        self.datasock.close()
+        self.connection.send('226 Transfer complete .\r\n')
+
+    def start_datasock(self):
+        if self.pasv_mode:
+            self.datasock, addr = self.servsock.accept()
+            print 'connect:', addr
+        else:
+            self.datasock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+            self.datasock.connect ((self.dataAddr, self.dataAddr))
+
+    def stop_datasock(self):
+        self.datasock.close()
+        if self.pasv_mode:
+            self.servsock.close()
+
+    def STOR(self, cmd):
+        filePath = os.path.join(self.cwd, cmd[5:-2])
+        print "Uploading file: ", filePath
+        if self.mode == 'I':
+            fileRead = open(filePath, 'wb')
+        else:
+            fileRead = open(filePath, 'w')
+        self.connection.send('150 Opening data connection .\r\n')
+        self.start_datasock()
+        while True:
+            data = self.datasock.recv(1024)
+            if not data: break
+            fileRead.write(data)
+        fileRead.close()
+        self.stop_datasock()
+        self.connection.send('226 Transfer complete')
 
 
 class FTPserver(threading.Thread):
