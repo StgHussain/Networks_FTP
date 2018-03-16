@@ -8,6 +8,8 @@ def Login(): # this will allow the user to input username and password
     password = getpass.getpass('Password: ') # gets the password
     runFTP(username, password)
 
+# this runFTP function brings all of the functions together
+
 def runFTP(username, password): # checks the username and password, then runs accordingly
     if username =='admin' and password == 'admin':
         # do stuff
