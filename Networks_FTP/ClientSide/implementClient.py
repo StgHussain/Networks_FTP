@@ -136,19 +136,57 @@ class FTPClient():
             self.clientSocket.send(' File TYPE I \n')
             # TYPE I refers to Image
     
-    #def STRU(self):
+    def STRU(self, fileStructure):
         # specifies file structure
         # F - File (no record structure) - Default
         # R - Record structure
         # P - Page structure
+        self.clientSocket.send(fileStructure) # send file structure to the server and get reply
+        self.serverResponse()
 
-
-# PORT 
+    def MODE(self, dataMode):
+        # specifies data transfer modes
+        # S - Stream - Default
+        # B - Block
+        # C - Compressed
+        self.clientSocket.send(dataMode) # send data transfer mode and get a reply
+        self.serverResponse() 
 
 # PASV requests the server-DTP to "listen " on a data port and wait for connection
 
-# TYPE default is ASCII non-print 
+    # FTP Service Commands
+    # -----------------------------------------------------------
+    def RETR(self, copyFile, blocksize = 8192):
+        # https://stackoverflow.com/questions/29110620/how-to-download-file-from-local-server-in-python
+        # transfer a copy of the file to the server
+        # blocksize is the max number of bytes to read from the socket at a time
+        self.clientSocket.send(copyFile)
+        copyFilePath = os.path.join(os.getcwd(),copyFile)
+        # joins the paths of the current wd with the coppied file
+        if self.isBinaryFile:
+            with open(copyFilePath, 'wb') as file_to_write:
+                while True:
+                    print 'You are downloading!'
+                    data = self.clientSocket.recv(blocksize)
+                    if not data:
+                        break
+                    file_to_write.write(data)
+                file_to_write.close()
+        else:
+            print 'File is not binary'
+            copyFile = open(copyFilePath, 'w') # w is write
+            
+        
+    #def STOR(self, storeFile):
+        # accepts data transfer and store the file at server site
+        # if pathname exists, file is overwritten at server
+        # else new file is stored
 
+
+    def NOOP(self):
+        # does nothing, but gets an OK from the server
+        self.clientSocket.send('NOOP')
+        self.serverResponse()
 
         
 # These functions allow the user to move between files on the client/server side
