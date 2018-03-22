@@ -13,15 +13,17 @@ Password: dae3Uiwa
 '''
 class FTPClient():
 
-    def __init__(self, user='', password=''):
+    def __init__(self, serverName, user, password):
         self.serverPort = 21 # default FTP server port
-        self.serverName = 'ELEN4017.ug.eie.wits.ac.za'
+        self.serverName = serverName # 'ELEN4017.ug.eie.wits.ac.za'
         #self.serverName = 'ftp://mirror.ac.za/'
         self.clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #initiate the client socket
         self.clientSocket.connect((self.serverName, self.serverPort))
         self.isBinaryFile = False # check to see if the file is binary
         self.login(user, password) # user has to login
-        
+        self.defaultDirectory = os.path.abspath('./Documents/Wits 4th Year/Semester 1/Networks/Project/')
+        print 'The default directory is: ', self.defaultDirectory
+
     # Receive the response from the server
     def serverResponse(self):
         response = self.clientSocket.recv(2048)
@@ -29,7 +31,7 @@ class FTPClient():
 
     # login to the server
     def login(self, user = '', password = ''):   
-
+        
         #serverName = 'ftp://mirror.ac.za/'
         #serverPort = 21 # normal FTP port 
         
@@ -39,6 +41,8 @@ class FTPClient():
         
         password = raw_input('Password: ')    
         self.PASS(password)
+        
+        #self.PORT(self.serverName, self.serverPort)
         
     # Access control commands for minimal implementation
     # ----------------------------------------------------- 
@@ -61,6 +65,11 @@ class FTPClient():
         self.clientSocket.send(account)
         self.serverResponse()    
     '''
+    def CWD(self, wd):
+        # change working directory
+        self.clientSocket.send('CWD ' + wd + '\r\n')
+        self.serverResponse()
+
     # need to test this
     def QUIT(self, user):
         # terminates the user and closes server if no transfer is taking place
@@ -83,7 +92,7 @@ class FTPClient():
 
         # Create new ACTIVE MODE socket and send PORT command 
         self.activeSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.activeSocket.bind(hostAddress, portAddress)
+        self.activeSocket.bind((hostAddress, portAddress))
         self.activeSocket.listen(1)       
         self.clientSocket.send('PORT ' + ','.join(splitHostAddress + splitPortAddress)  + '\r\n')
         print 'ACTIVE MODE connection created.'
@@ -118,6 +127,7 @@ class FTPClient():
         self.serverResponse() 
 
 # PASV requests the server-DTP to "listen " on a data port and wait for connection
+# Passive data connection
 
     # FTP Service Commands
     # -----------------------------------------------------------
@@ -167,9 +177,19 @@ class FTPClient():
         # accepts data transfer and store the file at server site
         # if pathname exists, file is overwritten at server
         # else new file is stored
-        print 'Attempting to upload a file'
-        self.clientSocket.send('STOR ' + uploadFile + '\r\n')
-        uploadFilePath = os.path.join(os.getcwd(), uploadFile)
+        uploadSocket = socket.socket(socket.AF_INET, socket.sock_STREAM) # open a new socket for uploading the file
+        uploadSocket.connect((self.))
+        uploadFilePath = os.path.join(self.defaultDirectory(os.path.realpath(__file__)), uploadFile)
+        
+        if os.path.exists(uploadFilePath):
+            print 'Attempting to upload a file'
+            self.clientSocket.send('STOR ' + uploadFile + '\r\n')
+        else:
+            print ' Not Found '
+            return
+        
+        
+        print ' loool '
         if self.isBinaryFile:
             fileToRead = open(uploadFilePath, 'rb') # read binary
         else:
@@ -184,14 +204,16 @@ class FTPClient():
             # the file must be overwritten
             fileToRead.close() # close the file
             self.clientSocket.shutdown()
+            self.serverResponse()
             print 'Upload Complete!'
         else: 
             print 'File path does not exist' # thus create new       
             # the new file must be stored
+        
 
     def NOOP(self):
-        # does nothing, but gets an OK from the server
-        self.clientSocket.send('NOOP')
+        # does nothing, but gets a 200 OK from the server
+        self.clientSocket.send('NOOP \r\n')
         self.serverResponse()
 
         
@@ -226,7 +248,7 @@ def listDir(): # list files in the directory
 #changeCWD()
 '''
 
-run = FTPClient()
+#run = FTPClient()
 #run = login()
 #minimum implementation
 '''
