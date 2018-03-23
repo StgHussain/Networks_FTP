@@ -17,6 +17,9 @@ class FTPClient():
         self.login(user, password) # user has to login
         self.defaultDirectory = os.path.abspath('.')
         print 'The default directory is: ', self.defaultDirectory
+        self.isPassiveMode = False # set passive mode to false
+        self.passiveIP =self.serverName
+        self.passivePORT = self.serverPort
 
     # Receive the response from the server
     def serverResponse(self):
@@ -93,7 +96,7 @@ class FTPClient():
         self.activeSocket.bind((hostAddress, portAddress))
         self.activeSocket.listen(1)       
         self.clientSocket.send('PORT ' + ','.join(splitHostAddress + splitPortAddress)  + '\r\n')
-        print 'ACTIVE MODE connection created.'
+        #print 'ACTIVE MODE connection created.'
         self.serverResponse()
 
 
@@ -124,8 +127,30 @@ class FTPClient():
         self.clientSocket.send('MODE ' + dataMode + '\r\n') # send data transfer mode and get a reply
         self.serverResponse() 
 
-# PASV requests the server-DTP to "listen " on a data port and wait for connection
-# Passive data connection
+    def PASV(self):
+        # PASV requests the server-DTP to "listen " on a data port and wait for connection
+        # Passive data connection
+        self.clientSocket.send('PASV \r\n')
+        # Server correctly enters passive mode
+        passiveResponse = self.clientSocket.recv(1024)
+        print 'response: ', passiveResponse
+        # need to use the ip sent back from the server
+        # however server sends back a lot of extra stuff
+        # thus need to manipulate only a section of the data in the string
+        # the numbers between the brackets are the IP and PORT
+        firstBracket = passiveResponse.find('(') # find first bracket
+        lastBracket = passiveResponse.find(')') # find last bracket
+        betweenBrackets = passiveResponse[firstBracket+1:-(len(passiveResponse) - lastBracket)]
+        getIP = betweenBrackets.split(',')
+        self.passiveIP = '.'.join(getIP[:4])
+
+        uPort = int(getIP[4]) # take the 4th and 5th entries to form the Port
+        lPort = int(getIP[5]) # of the passive mode connection
+        self.passivePORT =256*uPort + lPort
+
+        print 'Passive connection server address %s:%u\n' % (self.passiveIP,self.passivePORT)
+
+        self.isPassiveMode = True # set the passive mode to be true
 
     # FTP Service Commands
     # -----------------------------------------------------------
@@ -172,35 +197,80 @@ class FTPClient():
         self.clientSocket.shutdown() # close connection
         
 
-    def STOR(self, uploadFile): #UPLOAD
+    def STOR(self, fileName): #UPLOAD
         #http://www.bogotobogo.com/python/python_network_programming_server_client_file_transfer.php
         # accepts data transfer and store the file at server site
         # if pathname exists, file is overwritten at server
         # else new file is stored
-
-        print 'Attempting to connect upload socket...'
+        '''
+        filePath = os.path.join(self.defaultDirectory, fileName)
         
-        #uploadPath = os.path.join(self.defaultDirectory, uploadFile)
+        if os.path.exists(filePath):
+            self.clientSock.send('STOR '+fileName +'\r\n')
+        else:
+            print 'File not found'
+            return
+        print 'here?'
+       # if self.calledPortPasv == False:
+        #    self.getReply()
+         #   return
 
-        self.clientSocket.send('STOR ' + uploadFile + '\r\n')
-        ''' RUNS WITHOUT ERRORS, HOWEVER DOES NOT ACTUALLY UPLOAD
+        self.createSocket()
+        
+        if self.isBinaryFile:
+            requestedFile = open(filePath,'rb')
+        else :
+            requestedFile = open(filePath,'r')
+            
+        fileChunk = requestedFile.read(1024)
+
+        while fileChunk:
+            print 'Sending...'
+            self.newSocket.send(fileChunk)
+            fileChunk = requestedFile.read(1024)
+
+        requestedFile.close()
+        self.closeSocket()
+
+        print "Done Sending"
+
+        response = self.clientSocket.recv(1024)
+        print response
+
+        if response[:3] == '226':
+            return
+        elif response[:3] == '550':
+            print 'File trainsfer failed'
+        else:
+            print 'Unknown transfer error occured'
+            self.serverResponse()
+        '''
+        # RUNS WITHOUT ERRORS, HOWEVER DOES NOT ACTUALLY UPLOAD
+        print 'the fuck?'
+        filePath = os.path.join(self.defaultDirectory, uploadFile)
+        print filePath
+
+        self.clientSock.send('STOR '+ uploadFile +'\r\n')
         print os.getcwd()
+        
         toUpload = open(uploadFile, 'rb')
+        self.createSocket()
         print 'File has been opened.'
         data = toUpload.read(1024)
         print 'Data is being read'
         while (data):
             print 'Sending...'
-            self.clientSocket.send(data)
+            self.newSocket.send(data)
             print ' Socket created'
             data = toUpload.read(1024)
             print ' Data is reading in...'
             if not data:
                 break
         print 'Upload complete'    
-        toUpload.close()  
+        toUpload.close() 
+        self.closeSocket() 
         return
-        '''
+        
         '''
         if os.path.exists(uploadPath):
             self.clientSocket.send('STOR ' + uploadFile + '\r\n')
@@ -285,39 +355,25 @@ class FTPClient():
         print '___________________________________________'
         self.serverResponse()
 
-    
-'''  
-def getCWD():   # using os to change the directory
-        #if name == '..': # the .. will allow the user to go back
-    rootPath = "" #set a default path
-    currentDir = os.getcwd()
-    print 'Currently in working directory %s' % currentDir
+    def createSocket(self):
+        # create a socket to send/recieve data 
+        if self.isPassiveMode == True:
+            self.newSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.newSocket.connect((self.passiveIP,self.passivePORT))
+            print 'Passive mode socket created'
+        else:
+            print 'Active mode socket created', self.clientSocket.recv(1024)
+            self.newSocket, addr = self.activeSocket.accept()
 
-    return currentDir
-    #name = '' #name is the name of the directory
-    #terminal = 'cwd' + name
-    #return os.getcwd(terminal) # returns the current working directory
-
-def changeCWD():
-    path = getCWD()
-    changeDir = os.chdir(path)
-    print 'Currently in working directory %s' % changeDir
-'''
+    def closeSocket(self):
+        # close the socket created to send/recieve data    
+        if self.isPassiveMode == False:
+            self.activeSocket.close()
+        self.newSocket.close() # clsoe the passive socket
 
 
-'''
-def listDir(): # list files in the directory
-    
-    files = os.listdir(getCWD())
-    print '\n _______ List of Files _______\n'
-    for file in files:
-        print file
-    change = raw_input("To change working directory, use cd (name). ")
-#changeCWD()
-'''
 
-#run = FTPClient()
-#run = login()
+
 #minimum implementation
 '''
 TYPE - ASCII Non-print

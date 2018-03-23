@@ -11,8 +11,10 @@ Password: dae3Uiwa
 '''
 
 defaultUser = 'anonymous'
-defaultPass = 'anonymous'
+defaultPass = 'anonymous@'
 serverAddress = socket.gethostbyname('ELEN4017.ug.eie.wits.ac.za')
+#serverAddress = socket.getaddrinfo('ftp.uconn.edu',21)
+
 
 clientFTP = FTPClient(serverAddress, defaultUser, defaultPass)
 
@@ -50,6 +52,9 @@ while True:
             sockPort = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sockPort.bind(('',0))
             clientFTP.PORT(socket.gethostbyname(socket.gethostname()),sockPort.getsockname()[1])
+
+        elif checkFunction == 'PASV':
+            clientFTP.PASV()
 
         elif checkFunction == 'RETR':
             clientFTP.RETR(userInput[5:])
