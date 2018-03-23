@@ -4,13 +4,7 @@ import sys  # system-specific parameters and functions
 
 # www.rhyshaden.com/ftp.htm
 
-'''
-(ELEN4017.ug.eie.wits.ac.za)
 
-Username: group4
-
-Password: dae3Uiwa
-'''
 class FTPClient():
 
     def __init__(self, serverName, user, password):
@@ -21,7 +15,7 @@ class FTPClient():
         self.clientSocket.connect((self.serverName, self.serverPort))
         self.isBinaryFile = False # check to see if the file is binary
         self.login(user, password) # user has to login
-        self.defaultDirectory = os.path.abspath('./Documents/Wits 4th Year/Semester 1/Networks/Project/')
+        self.defaultDirectory = os.path.abspath('.')
         print 'The default directory is: ', self.defaultDirectory
 
     # Receive the response from the server
@@ -46,13 +40,13 @@ class FTPClient():
         
     # Access control commands for minimal implementation
     # ----------------------------------------------------- 
-    def USER(self, user):
+    def USER(self, user):# works
         # required for access to the file system
         # send the username to the server
         self.clientSocket.send('USER '+ user + '\r\n') # '\r\n' needed as it is for 
         self.serverResponse()
 
-    def PASS(self, password):
+    def PASS(self, password): # works
         # send the password to the server 
         
         self.clientSocket.send('PASS ' + password  + '\r\n')
@@ -70,18 +64,22 @@ class FTPClient():
         self.clientSocket.send('CWD ' + wd + '\r\n')
         self.serverResponse()
 
+    def CDUP(self):
+        self.clientSocket.send('CDUP \r\n')
+        self.serverResponse()
+
     # need to test this
-    def QUIT(self, user):
+    def QUIT(self): # works
         # terminates the user and closes server if no transfer is taking place
         # shutdown() shutsdown one or both halves of the connection
-        self.clientSocket.send('QUIT ' + user + '\r\n')
-        self.clientSocket.shutdown(user)
+        self.clientSocket.send('QUIT \r\n')
+        #self.clientSocket.shutdown()
         self.serverResponse()
 
     # Transfer parameter commands
     # ----------------------------------------------------------
     
-    def PORT(self, hostAddress, portAddress):
+    def PORT(self, hostAddress, portAddress): # works
         # data PORT for data connection
         # normal circumstances this is not needed
         # this is for ACTIVE mode
@@ -110,7 +108,7 @@ class FTPClient():
             self.clientSocket.send(' File TYPE I \n')
             # TYPE I refers to Image
     
-    def STRU(self, fileStructure):
+    def STRU(self, fileStructure): # default works
         # specifies file structure
         # F - File (no record structure) - Default
         # R - Record structure
@@ -118,7 +116,7 @@ class FTPClient():
         self.clientSocket.send('STRU ' + fileStructure + '\r\n') # send file structure to the server and get reply
         self.serverResponse()
 
-    def MODE(self, dataMode):
+    def MODE(self, dataMode): # default works
         # specifies data transfer modes
         # S - Stream - Default
         # B - Block
@@ -138,25 +136,27 @@ class FTPClient():
         self.clientSocket.send('RETR ' + copyFile + '\r\n')
         copyFilePath = os.path.join(os.getcwd(),copyFile)
         # joins the paths of the current wd with the coppied file
-        if self.isBinaryFile:
-            with open(copyFilePath, 'wb') as file_to_write:
-                while True:
-                    print 'You are downloading!'
-                    data = self.clientSocket.recv(blocksize)
-                    if not data:
-                        break
-                    file_to_write.write(data)
-                file_to_write.close()
-        else:
-            print 'File is not binary'
-            copyFile = open(copyFilePath, 'w') # w is write
+        #if os.path.exists(copyfilePath):
+
+        #    with open(copyFilePath, 'wb') as file_to_write:
+        #        while True:
+        #            print 'You are downloading!'
+        #            data = self.clientSocket.recv(blocksize)
+        #            if not data:
+        #                break
+        #            file_to_write.write(data)
+        #        file_to_write.close()
+        #else:
+        #    print 'file does not exist on server'
+        #print 'File is not binary'
+        #copyFile = open(copyFilePath, 'w') # w is write
             
-        print 'Download Complete!'
-        self.clientSocket.shutdown() # close the connection
+        #print 'Download Complete!'
+        #self.clientSocket.shutdown() # close the connection
         
         # Additional method to download/recieve a file
-        '''
-        with open('recieved file', 'wb') as f:
+        
+        with open(copyFile, 'wb') as f:
             print 'The file has been opened'
             while True:
                 print 'Recieving file..'
@@ -168,22 +168,79 @@ class FTPClient():
                     break
                 f.write(data) # write the data to the file
 
-        print 'Upload Complete!'
+        print 'Download Complete!'
         self.clientSocket.shutdown() # close connection
-        '''
+        
 
-    def STOR(self, uploadFile, blocksize = 8192): #UPLOAD
+    def STOR(self, uploadFile): #UPLOAD
         #http://www.bogotobogo.com/python/python_network_programming_server_client_file_transfer.php
         # accepts data transfer and store the file at server site
         # if pathname exists, file is overwritten at server
         # else new file is stored
-        uploadSocket = socket.socket(socket.AF_INET, socket.sock_STREAM) # open a new socket for uploading the file
-        uploadSocket.connect((self.))
-        uploadFilePath = os.path.join(self.defaultDirectory(os.path.realpath(__file__)), uploadFile)
+
+        print 'Attempting to connect upload socket...'
         
+        #uploadPath = os.path.join(self.defaultDirectory, uploadFile)
+
+        self.clientSocket.send('STOR ' + uploadFile + '\r\n')
+        ''' RUNS WITHOUT ERRORS, HOWEVER DOES NOT ACTUALLY UPLOAD
+        print os.getcwd()
+        toUpload = open(uploadFile, 'rb')
+        print 'File has been opened.'
+        data = toUpload.read(1024)
+        print 'Data is being read'
+        while (data):
+            print 'Sending...'
+            self.clientSocket.send(data)
+            print ' Socket created'
+            data = toUpload.read(1024)
+            print ' Data is reading in...'
+            if not data:
+                break
+        print 'Upload complete'    
+        toUpload.close()  
+        return
+        '''
+        '''
+        if os.path.exists(uploadPath):
+            self.clientSocket.send('STOR ' + uploadFile + '\r\n')
+        else:
+            print ' Unable to locate file'
+            return
+        
+        print ' File found '
+        # open a new socket for uploading
+        #uploadSocket = socket.socket(socket.AF_INET, socket.sock_STREAM) # open a new socket for uploading the file
+        #uploadSocket.connect((self.serverName,self.serverPort))   
+        print 'Connection has been established'
+        '''
+
+        '''
+        while True:
+            
+            cmd = uploadSocket.recv(32)
+
+            if cmd == 'getFileName':
+                print ' getFileName recieved '
+                uploadFile.sendall(uploadFile)
+            
+            if cmd == 'getFile':
+                print ' getFile recieved. Sending file...'
+                with open(uploadFile, 'rb') as f:
+                    data = f.read()
+                uploadSocket.sendall(data)
+                print 'File uploaded'
+
+            uploadSocket.shutdown()
+            
+
+        
+        uploadFilePath = os.path.join(self.defaultDirectory(os.path.realpath(__file__)), uploadFile)
+        print 'the upload path', uploadFilePath
+
         if os.path.exists(uploadFilePath):
             print 'Attempting to upload a file'
-            self.clientSocket.send('STOR ' + uploadFile + '\r\n')
+            self.uploadSocket.send('STOR ' + uploadFile + '\r\n')
         else:
             print ' Not Found '
             return
@@ -200,17 +257,17 @@ class FTPClient():
 
             while fileUpload:
                 print 'File is uploading..'
-                self.clientSocket.send(fileUpload)     
+                self.uploadSocket.send(fileUpload)     
             # the file must be overwritten
             fileToRead.close() # close the file
-            self.clientSocket.shutdown()
+            self.uploadSocket.shutdown()
             self.serverResponse()
             print 'Upload Complete!'
         else: 
             print 'File path does not exist' # thus create new       
             # the new file must be stored
+        '''
         
-
     def NOOP(self):
         # does nothing, but gets a 200 OK from the server
         self.clientSocket.send('NOOP \r\n')
@@ -219,6 +276,16 @@ class FTPClient():
         
 # These functions allow the user to move between files on the client/server side
 # ------------------------------------------------------------------------------
+    def LIST(self):
+        self.clientSocket.send('LIST \r\n') # send the command to the server
+        files = os.listdir(os.getcwd())
+        print '\n _______ List of Files of Client _______\n'
+        for file in files:
+            print file
+        print '___________________________________________'
+        self.serverResponse()
+
+    
 '''  
 def getCWD():   # using os to change the directory
         #if name == '..': # the .. will allow the user to go back
@@ -235,9 +302,10 @@ def changeCWD():
     path = getCWD()
     changeDir = os.chdir(path)
     print 'Currently in working directory %s' % changeDir
+'''
 
 
-
+'''
 def listDir(): # list files in the directory
     
     files = os.listdir(getCWD())
