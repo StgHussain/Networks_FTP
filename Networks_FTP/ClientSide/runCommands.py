@@ -1,7 +1,7 @@
 import socket
 import os
 from implementClient import FTPClient
-
+from ftplib import FTP
 '''
 (ELEN4017.ug.eie.wits.ac.za)
 
@@ -9,6 +9,13 @@ Username: group4
 
 Password: dae3Uiwa
 '''
+#ftp = FTP('ELEN4017.ug.eie.wits.ac.za')
+#ftp.login('group4', 'dae3Uiwa')
+
+#ftp.retrlines('LIST')
+#ftp.cwd('files')
+
+
 
 defaultUser = 'anonymous'
 defaultPass = 'anonymous@'
@@ -21,10 +28,9 @@ clientFTP = FTPClient(serverAddress, defaultUser, defaultPass)
 #serverResponse = clientFTP.serverResponse() # get server response to client socket
 # first need to check if connection to the server has been made
 
-'''
-group4
-dae3Uiwa
-'''
+#group4
+#dae3Uiwa
+
 
 while True:
     userInput = raw_input('Input a command: ') # prompt the user to input a command 

@@ -15,8 +15,8 @@ class FTPClient():
         self.clientSocket.connect((self.serverName, self.serverPort))
         self.isBinaryFile = False # check to see if the file is binary
         self.login(user, password) # user has to login
-        self.defaultDirectory = os.path.abspath('.')
-        print 'The default directory is: ', self.defaultDirectory
+        #self.defaultDirectory = os.path.abspath('.')
+       # print 'The default directory is: ', self.defaultDirectory
         self.isPassiveMode = False # set passive mode to false
         self.passiveIP =self.serverName
         self.passivePORT = self.serverPort
@@ -194,46 +194,28 @@ class FTPClient():
         self.serverResponse()
         return
 
-        # joins the paths of the current wd with the coppied file
-        #if os.path.exists(copyfilePath):
-
-        #    with open(copyFilePath, 'wb') as file_to_write:
-        #        while True:
-        #            print 'You are downloading!'
-        #            data = self.clientSocket.recv(blocksize)
-        #            if not data:
-        #                break
-        #            file_to_write.write(data)
-        #        file_to_write.close()
-        #else:
-        #    print 'file does not exist on server'
-        #print 'File is not binary'
-        #copyFile = open(copyFilePath, 'w') # w is write
-            
-        #print 'Download Complete!'
-        #self.clientSocket.shutdown() # close the connection
-        
-        # Additional method to download/recieve a file
-        
-        
-
     def STOR(self, uploadFile): #UPLOAD
         #http://www.bogotobogo.com/python/python_network_programming_server_client_file_transfer.php
         # accepts data transfer and store the file at server site
         # if pathname exists, file is overwritten at server
         # else new file is stored
         
-        self.clientSocket.send('STOR ' + uploadFile + '/' +'\r\n')
-        self.createSocket()
-        
-        #uploadFilePath = os.path.join(os.getcwd(),uploadFile)
-
-        if self.isBinaryFile == False:
-            toUpload = open(uploadFile, 'rb')
+        # do the path name exist check
+        uploadFilePath = os.path.join(os.getcwd(), uploadFile)
+        if os.path.exists(uploadFilePath):
+            self.clientSocket.send('STOR ' + uploadFile + '/' +'\r\n')
         else:
-            toUpload = open(uploadFile, 'r')
+            print 'The file was not found'
+            return
+        
+        self.createSocket()
+    
+        if self.isBinaryFile == False:
+            toUpload = open(uploadFilePath, 'rb') # read binary
+        else:
+            toUpload = open(uploadFilePath, 'r')
 
-        self.TYPE(uploadFile)
+        #self.TYPE(uploadFile)
         
         print 'File has been opened.'
         data = toUpload.read(1024)
@@ -263,14 +245,45 @@ class FTPClient():
         
 # These functions allow the user to move between files on the client/server side
 # ------------------------------------------------------------------------------
-    def LIST(self):
-        self.clientSocket.send('LIST \r\n') # send the command to the server
+    def listClient(self):
         files = os.listdir(os.getcwd())
         print '\n _______ List of Files of Client _______\n'
         for file in files:
             print file
         print '___________________________________________'
+
+    def LIST(self):
+
+        self.clientSocket.send('LIST \r\n')
+        
+        #self.listClient() # list the files in the clients current directory
+        self.createSocket() # create a socket to recieve the directories of the server
+        directory = ''
+        listDir = [] # empty array
+        recvDir = self.newSocket.recv(1024)
+        
+        
+        while (recvDir):
+            directory = directory + recvDir
+            recvDir = self.newSocket.recv(1024)
+
+        listDir = directory.split('\n')
+        # print out the files in the directory
+        print '_____ Server files in current directory _____ \n'
+        for i in range(0, len(listDir)):
+            if len(listDir) == 0:
+                print "There are no files in this directory"
+                break
+            else:
+                print listDir[i], '\n'       
+                print '_________________________________________'                
+        
+        self.closeSocket() # close the socket
         self.serverResponse()
+        #return
+
+
+
 
     def createSocket(self):
         # create a socket to send/recieve data 
