@@ -62,12 +62,12 @@ class FTPClient():
         self.clientSocket.send(account)
         self.serverResponse()    
     '''
-    def CWD(self, wd):
+    def CWD(self, wd): # works
         # change working directory
         self.clientSocket.send('CWD ' + wd + '\r\n')
         self.serverResponse()
 
-    def CDUP(self):
+    def CDUP(self): # works
         self.clientSocket.send('CDUP \r\n')
         self.serverResponse()
 
@@ -102,15 +102,22 @@ class FTPClient():
 
     def TYPE(self, fileType):
         # transfer byte size is always 8 bits
-        if fileType.endswith('.txt'):
-            self.isBinaryFile = False
-            self.clientSocket.send(' File TYPE A \n')
+       
+        if fileType.find('.') != -1:
+            if fileType.find('.txt') != -1 or \
+                fileType.find('.html') != -1:
+                self.isBinaryFile = False
+                self.clientSocket.send('TYPE A\r\n')
             # TYPE A refers to ASCII
-        else:
-            self.isBinaryFile = True
-            self.clientSocket.send(' File TYPE I \n')
+            else:
+                self.isBinaryFile = True
+                self.clientSocket.send('TYPE I\r\n')
             # TYPE I refers to Image
-    
+        else:
+            return
+        self.serverResponse()
+
+
     def STRU(self, fileStructure): # default works
         # specifies file structure
         # F - File (no record structure) - Default
@@ -154,12 +161,39 @@ class FTPClient():
 
     # FTP Service Commands
     # -----------------------------------------------------------
-    def RETR(self, copyFile, blocksize = 8192): #DOWNLOAD
+    def RETR(self, downloadFile, blocksize = 8192): #DOWNLOAD
         # https://stackoverflow.com/questions/29110620/how-to-download-file-from-local-server-in-python
         # transfer a copy of the file to the server
         # blocksize is the max number of bytes to read from the socket at a time
-        self.clientSocket.send('RETR ' + copyFile + '\r\n')
-        copyFilePath = os.path.join(os.getcwd(),copyFile)
+        self.clientSocket.send('RETR ' + downloadFile + '\r\n')
+        
+        self.createSocket() # create the data socket
+        
+        downloadFilePath = os.path.join(os.getcwd(),downloadFile)
+
+        if self.isBinaryFile == False:
+            toDownload = open(downloadFile, 'wb') # write binary
+        else:
+            toDownload = open(downloadFile, 'w')  # write
+
+        self.TYPE(downloadFile)
+        
+        print 'The file has been opened'
+        while True:
+            print 'Recieving file..'
+            data = self.newSocket.recv(blocksize)
+            print ('data = %s', data)
+            toDownload.write(data) # write the data to the file
+            if not data:
+                toDownload.close()
+                print 'The file has been closed'
+                break
+            
+        print 'Download Complete!'
+        self.closeSocket() # close connection
+        self.serverResponse()
+        return
+
         # joins the paths of the current wd with the coppied file
         #if os.path.exists(copyfilePath):
 
@@ -181,164 +215,47 @@ class FTPClient():
         
         # Additional method to download/recieve a file
         
-        with open(copyFile, 'wb') as f:
-            print 'The file has been opened'
-            while True:
-                print 'Recieving file..'
-                data = self.clientSocket.recv(blocksize)
-                print ('data = %s', data)
-                if not data:
-                    f.close()
-                    print 'The file has been closed'
-                    break
-                f.write(data) # write the data to the file
-
-        print 'Download Complete!'
-        self.clientSocket.shutdown() # close connection
         
 
-    def STOR(self, fileName): #UPLOAD
+    def STOR(self, uploadFile): #UPLOAD
         #http://www.bogotobogo.com/python/python_network_programming_server_client_file_transfer.php
         # accepts data transfer and store the file at server site
         # if pathname exists, file is overwritten at server
         # else new file is stored
-        '''
-        filePath = os.path.join(self.defaultDirectory, fileName)
         
-        if os.path.exists(filePath):
-            self.clientSock.send('STOR '+fileName +'\r\n')
-        else:
-            print 'File not found'
-            return
-        print 'here?'
-       # if self.calledPortPasv == False:
-        #    self.getReply()
-         #   return
-
+        self.clientSocket.send('STOR ' + uploadFile + '/' +'\r\n')
         self.createSocket()
         
-        if self.isBinaryFile:
-            requestedFile = open(filePath,'rb')
-        else :
-            requestedFile = open(filePath,'r')
-            
-        fileChunk = requestedFile.read(1024)
+        #uploadFilePath = os.path.join(os.getcwd(),uploadFile)
 
-        while fileChunk:
-            print 'Sending...'
-            self.newSocket.send(fileChunk)
-            fileChunk = requestedFile.read(1024)
-
-        requestedFile.close()
-        self.closeSocket()
-
-        print "Done Sending"
-
-        response = self.clientSocket.recv(1024)
-        print response
-
-        if response[:3] == '226':
-            return
-        elif response[:3] == '550':
-            print 'File trainsfer failed'
+        if self.isBinaryFile == False:
+            toUpload = open(uploadFile, 'rb')
         else:
-            print 'Unknown transfer error occured'
-            self.serverResponse()
-        '''
-        # RUNS WITHOUT ERRORS, HOWEVER DOES NOT ACTUALLY UPLOAD
-        print 'the fuck?'
-        filePath = os.path.join(self.defaultDirectory, uploadFile)
-        print filePath
+            toUpload = open(uploadFile, 'r')
 
-        self.clientSock.send('STOR '+ uploadFile +'\r\n')
-        print os.getcwd()
+        self.TYPE(uploadFile)
         
-        toUpload = open(uploadFile, 'rb')
-        self.createSocket()
         print 'File has been opened.'
         data = toUpload.read(1024)
-        print 'Data is being read'
+       # print 'Data is being read'
         while (data):
-            print 'Sending...'
-            self.newSocket.send(data)
-            print ' Socket created'
-            data = toUpload.read(1024)
-            print ' Data is reading in...'
-            if not data:
-                break
+            try: 
+                print 'Sending...'
+                self.newSocket.send(data)
+                data = toUpload.read(1024)
+            # print ' Data is reading in...'
+                if not data:
+                    break
+            except:
+                print 'Unable to upload file'
+                return        
         print 'Upload complete'    
         toUpload.close() 
         self.closeSocket() 
+        self.serverResponse()
         return
         
-        '''
-        if os.path.exists(uploadPath):
-            self.clientSocket.send('STOR ' + uploadFile + '\r\n')
-        else:
-            print ' Unable to locate file'
-            return
-        
-        print ' File found '
-        # open a new socket for uploading
-        #uploadSocket = socket.socket(socket.AF_INET, socket.sock_STREAM) # open a new socket for uploading the file
-        #uploadSocket.connect((self.serverName,self.serverPort))   
-        print 'Connection has been established'
-        '''
-
-        '''
-        while True:
-            
-            cmd = uploadSocket.recv(32)
-
-            if cmd == 'getFileName':
-                print ' getFileName recieved '
-                uploadFile.sendall(uploadFile)
-            
-            if cmd == 'getFile':
-                print ' getFile recieved. Sending file...'
-                with open(uploadFile, 'rb') as f:
-                    data = f.read()
-                uploadSocket.sendall(data)
-                print 'File uploaded'
-
-            uploadSocket.shutdown()
-            
-
-        
-        uploadFilePath = os.path.join(self.defaultDirectory(os.path.realpath(__file__)), uploadFile)
-        print 'the upload path', uploadFilePath
-
-        if os.path.exists(uploadFilePath):
-            print 'Attempting to upload a file'
-            self.uploadSocket.send('STOR ' + uploadFile + '\r\n')
-        else:
-            print ' Not Found '
-            return
-        
-        
-        print ' loool '
-        if self.isBinaryFile:
-            fileToRead = open(uploadFilePath, 'rb') # read binary
-        else:
-            fileToRead = open(uploadFilePath, 'r')
-
-        if os.path.exists(uploadFilePath):
-            fileUpload = fileToRead.read(blocksize)
-
-            while fileUpload:
-                print 'File is uploading..'
-                self.uploadSocket.send(fileUpload)     
-            # the file must be overwritten
-            fileToRead.close() # close the file
-            self.uploadSocket.shutdown()
-            self.serverResponse()
-            print 'Upload Complete!'
-        else: 
-            print 'File path does not exist' # thus create new       
-            # the new file must be stored
-        '''
-        
-    def NOOP(self):
+    def NOOP(self): # works
         # does nothing, but gets a 200 OK from the server
         self.clientSocket.send('NOOP \r\n')
         self.serverResponse()
@@ -370,7 +287,7 @@ class FTPClient():
         if self.isPassiveMode == False:
             self.activeSocket.close()
         self.newSocket.close() # clsoe the passive socket
-
+        print 'New Socket has been closed'
 
 
 

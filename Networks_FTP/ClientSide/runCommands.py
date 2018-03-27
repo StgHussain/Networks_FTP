@@ -28,9 +28,6 @@ dae3Uiwa
 
 while True:
     userInput = raw_input('Input a command: ') # prompt the user to input a command 
-    
-    
-
     try: 
         #func = getattr(clientFTP, userInput[:4].strip().upper())
         #func(userInput)
@@ -48,6 +45,12 @@ while True:
         elif checkFunction == 'LIST':
             clientFTP.LIST()
 
+        elif checkFunction == 'CWD':
+            clientFTP.CWD(userInput[4:])
+
+        elif checkFunction == 'CDUP':
+            clientFTP.CDUP()
+
         elif checkFunction == 'PORT':
             sockPort = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sockPort.bind(('',0))
@@ -62,11 +65,14 @@ while True:
         elif checkFunction == 'STOR':
             clientFTP.STOR(userInput[5:])
         
+        elif checkFunction == 'NOOP':
+            clientFTP.NOOP()
+
         elif checkFunction == 'QUIT':
             clientFTP.QUIT()
             break
 
     except Exception, e:
         
-        print 'ERROR: ', 
+        print 'An Error has occured: ', 
         break
