@@ -161,6 +161,8 @@ class FTPClient():
 
     # FTP Service Commands
     # -----------------------------------------------------------
+    
+    # download works for text file
     def RETR(self, downloadFile, blocksize = 8192): #DOWNLOAD
         # https://stackoverflow.com/questions/29110620/how-to-download-file-from-local-server-in-python
         # transfer a copy of the file to the server
@@ -176,13 +178,13 @@ class FTPClient():
         else:
             toDownload = open(downloadFile, 'w')  # write
 
-        self.TYPE(downloadFile)
+        #self.TYPE(downloadFile)
         
         print 'The file has been opened'
         while True:
             print 'Recieving file..'
             data = self.newSocket.recv(blocksize)
-            print ('data = %s', data)
+            #print ('data = %s', data)
             toDownload.write(data) # write the data to the file
             if not data:
                 toDownload.close()

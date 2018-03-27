@@ -1,7 +1,7 @@
 import socket
 import os
 from implementClient import FTPClient
-from ftplib import FTP
+#from ftplib import FTP
 '''
 (ELEN4017.ug.eie.wits.ac.za)
 
@@ -9,13 +9,18 @@ Username: group4
 
 Password: dae3Uiwa
 '''
-#ftp = FTP('ELEN4017.ug.eie.wits.ac.za')
-#ftp.login('group4', 'dae3Uiwa')
+'''
+ftp = FTP('ELEN4017.ug.eie.wits.ac.za')
+ftp.login('group4', 'dae3Uiwa')
+ftp.retrlines('LIST')
+ftp.cwd('files')
+file = open('picture.png', 'rb')
+ftp.storbinary('STOR picture.png', file)
+file.close()
+ftp.retrlines('LIST')
+'''
 
-#ftp.retrlines('LIST')
-#ftp.cwd('files')
-
-
+#'''
 
 defaultUser = 'anonymous'
 defaultPass = 'anonymous@'
@@ -41,6 +46,12 @@ while True:
 
         if checkFunction == 'STRU':
             clientFTP.STRU(userInput[5:])
+
+        elif checkFunction == 'USER':
+            clientFTP.USER(userInput[5:])
+
+        elif checkFunction == 'PASS':
+            clientFTP.PASS(userInput[5:])
 
         elif checkFunction == 'MODE':
             clientFTP.MODE(userInput[5:])
@@ -82,3 +93,4 @@ while True:
         
         print 'An Error has occured: ', 
         break
+#'''
