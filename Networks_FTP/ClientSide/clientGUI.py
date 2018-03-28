@@ -1,11 +1,37 @@
+import sys 
+from ftplib import FTP
+import Tkinter as tk
+import tkFileDialog
 
-# This is an attempt at a GUI
+#import Tkinter as ttk
 
-#from tkinter import *
-#import tkinter.messagebox
-# This is a basic login screen
-#https://www.youtube.com/watch?v=iCK8adSeG7A
+class App(tk.Tk):    
+    def __init__(self):
+        tk.Tk.__init__(self)
+        self.geometry("600x400+200+200")
+        self.title("ELEN4019 FTP Server")
+       # self.Appbutton = tk.Button(text='Choose a File to Upload', command = self.launch_file_dialog_box).pack()
+       # self.Appbutton_FTP = tk.Button(text='Upload File to FTP Server', command =  self.upload_file_to_FTP).pack()
+        self.userText = tk.Label(text="Username")
 
+
+    def launch_file_dialog_box(self):
+        self.raw_filename = tkFileDialog.askopenfilename()
+
+
+
+    def upload_file_to_FTP(self):
+    ##    first thing we do is connect to the ftp host        
+            ftp = FTP('')
+            ftp.login( user = '', passwd='')
+            ftp.cwd("")
+            ftp.set_pasv(False)
+            file_name = self.raw_filename
+            file = open(file_name, 'rb')
+            ftp.storbinary('STOR ' + file_name, file)
+            file.quit()
+app = App()
+app.mainloop()
 
 '''
 
@@ -37,23 +63,17 @@ def Login(self):    #define the login screen
 def login_button_click(self):
     username = self.userInput.get() #get the username from the textbox
     password = self.passInput.get() #get the password from the textbox
-
-    if username == 'admin' and password == 'admin':
-        #window.destory() #destroy the login window to open the new window
-        tkinter.messagebox.showinfo('YOu are logged in')
-    else:
-        tkinter.messagebox.showerror('Incorrect details')
 ################################################################################
 # Main ###
 
 Login(self)
+
+
 '''
-
-
 ################################################################################
 # This code is similar to what i want to do, however it displays a messagebox rather than
 # opens a new window
-''' 
+'''
 class LoginFrame(Frame):
     def __init__(self, master):
         super().__init__(master)
