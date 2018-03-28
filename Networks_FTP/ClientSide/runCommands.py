@@ -68,6 +68,9 @@ while True:
         elif checkFunction == 'CDUP':
             clientFTP.CDUP()
 
+        elif checkFunction == 'PWD':
+            clientFTP.PWD()
+
         elif checkFunction == 'PORT':
             sockPort = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sockPort.bind(('',0))
@@ -91,6 +94,6 @@ while True:
 
     except Exception, e:
         
-        print 'An Error has occured: ', 
+        print 'An Error has occured: ', e 
         break
 #'''
