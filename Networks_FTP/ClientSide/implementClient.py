@@ -273,7 +273,6 @@ class FTPClient():
         listDir = [] # empty array
         recvDir = self.newSocket.recv(1024)
         
-        
         while (recvDir):
             directory = directory + recvDir
             recvDir = self.newSocket.recv(1024)
@@ -297,7 +296,12 @@ class FTPClient():
         self.clientSocket.send('PWD\r\n')
         self.serverResponse()
 
+    def DELE(self, pathName): # delete a file
+        self.clientSocket.send('DELE ' + pathName + '\r\n')
+        self.serverResponse()
 
+
+# creating and deleting the data transfer sockets
 
     def createSocket(self):
         # create a socket to send/recieve data 

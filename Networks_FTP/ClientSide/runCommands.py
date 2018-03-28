@@ -71,6 +71,9 @@ while True:
         elif checkFunction == 'PWD':
             clientFTP.PWD()
 
+        elif checkFunction == 'DELE':
+            clientFTP.DELE(userInput[5:])
+
         elif checkFunction == 'PORT':
             sockPort = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sockPort.bind(('',0))
