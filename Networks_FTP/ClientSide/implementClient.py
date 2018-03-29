@@ -92,11 +92,12 @@ class FTPClient():
         splitHostAddress = hostAddress.split('.') # split the ip at each . # host address is 32 bit size
         splitPortAddress = [repr(portAddress//256), repr(portAddress % 256)] # port is 16 bit size
 
+        bytes = splitHostAddress + splitPortAddress
         # Create new ACTIVE MODE socket and send PORT command 
         self.activeSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.activeSocket.bind((hostAddress, portAddress))
         self.activeSocket.listen(1)       
-        self.clientSocket.send('PORT ' + ','.join(splitHostAddress + splitPortAddress)  + '\r\n')
+        self.clientSocket.send('PORT ' + ','.join(bytes)  + '\r\n')
         #print 'ACTIVE MODE connection created.'
         self.serverResponse()
 
@@ -105,21 +106,6 @@ class FTPClient():
         # transfer byte size is always 8 bits
         self.clientSocket.send('TYPE ' + tipe + '\r\n')
         self.serverResponse()
-
-
-       # if fileType.find('.') != -1:
-       #     if fileType.find('.txt') != -1 or \
-       #         fileType.find('.html') != -1:
-       #         self.isBinaryFile = False
-       #         self.clientSocket.send('TYPE A\r\n')
-       #     # TYPE A refers to ASCII
-       #     else:
-       #         self.isBinaryFile = True
-       #         self.clientSocket.send('TYPE I\r\n')
-            # TYPE I refers to Image
-       # else:
-       #     return
-        #self.serverResponse()
 
 
     def STRU(self, fileStructure): # default works
@@ -224,26 +210,26 @@ class FTPClient():
         #data = toUpload.read(blocksize)
        # print 'Data is being read'
         
-        uploadResponse = self.serverResponse()
-        print uploadResponse
-        if not uploadResponse.startswith('5') or not uploadResponse.startswith('4'):
+       # uploadResponse = self.serverResponse()
+       # print uploadResponse
+       # if not uploadResponse.startswith('5') or not uploadResponse.startswith('4'):
 
-            try:
-                while 1: 
-                    data = toUpload.read(blocksize)
+        try:
+            while 1: 
+                data = toUpload.read(blocksize)
             # print ' Data is reading in...'
-                    if not data:
-                        break
-                    print 'Sending...'
-                    self.newSocket.sendall(data)
-            except:
-                print 'Unable to upload file'
-                return        
-            finally:
-                print 'Upload complete'    
-                toUpload.close() 
+                if not data:
+                    break
+                print 'Sending...'
+                self.newSocket.sendall(data)
+        except:
+            print 'Unable to upload file'
+            return        
+        finally:
+            print 'Upload complete'    
+            toUpload.close() 
             #self.closeSocket()
-                self.newSocket.close()
+            self.closeSocket()
 
         self.serverResponse()
         #return

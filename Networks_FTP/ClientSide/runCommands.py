@@ -22,13 +22,16 @@ ftp.retrlines('LIST')
 
 #'''
 
-defaultUser = 'anonymous'
-defaultPass = 'anonymous@'
-serverAddress = socket.gethostbyname('ELEN4017.ug.eie.wits.ac.za')
+
+def runCommands():
+
+    defaultUser = 'anonymous'
+    defaultPass = 'anonymous@'
+    serverAddress = socket.gethostbyname('ELEN4017.ug.eie.wits.ac.za')
 #serverAddress = socket.getaddrinfo('ftp.uconn.edu',21)
 
 
-clientFTP = FTPClient(serverAddress, defaultUser, defaultPass)
+    clientFTP = FTPClient(serverAddress, defaultUser, defaultPass)
 
 #serverResponse = clientFTP.serverResponse() # get server response to client socket
 # first need to check if connection to the server has been made
@@ -37,66 +40,67 @@ clientFTP = FTPClient(serverAddress, defaultUser, defaultPass)
 #dae3Uiwa
 
 
-while True:
-    userInput = raw_input('Input a command: ') # prompt the user to input a command 
-    try: 
-        #func = getattr(clientFTP, userInput[:4].strip().upper())
-        #func(userInput)
-        checkFunction = userInput[:4].strip().upper()
+    while True:
+        userInput = raw_input('Input a command: ') # prompt the user to input a command 
+       
+        try: 
+            
+            checkFunction = userInput[:4].strip().upper()
 
-        if checkFunction == 'STRU':
-            clientFTP.STRU(userInput[5:])
+            if checkFunction == 'STRU':
+                clientFTP.STRU(userInput[5:])
 
-        elif checkFunction == 'USER':
-            clientFTP.USER(userInput[5:])
+            elif checkFunction == 'USER':
+                clientFTP.USER(userInput[5:])
 
-        elif checkFunction == 'PASS':
-            clientFTP.PASS(userInput[5:])
+            elif checkFunction == 'PASS':
+                clientFTP.PASS(userInput[5:])
 
-        elif checkFunction == 'MODE':
-            clientFTP.MODE(userInput[5:])
+            elif checkFunction == 'MODE':
+                clientFTP.MODE(userInput[5:])
 
-        elif checkFunction == 'TYPE':
-            clientFTP.TYPE(userInput[5:])
+            elif checkFunction == 'TYPE':
+                clientFTP.TYPE(userInput[5:])
 
-        elif checkFunction == 'LIST':
-            clientFTP.LIST()
+            elif checkFunction == 'LIST':
+                clientFTP.LIST()
 
-        elif checkFunction == 'CWD':
-            clientFTP.CWD(userInput[4:])
+            elif checkFunction == 'CWD':
+                clientFTP.CWD(userInput[4:])
 
-        elif checkFunction == 'CDUP':
-            clientFTP.CDUP()
+            elif checkFunction == 'CDUP':
+                clientFTP.CDUP()
 
-        elif checkFunction == 'PWD':
-            clientFTP.PWD()
+            elif checkFunction == 'PWD':
+                clientFTP.PWD()
 
-        elif checkFunction == 'DELE':
-            clientFTP.DELE(userInput[5:])
+            elif checkFunction == 'DELE':
+                clientFTP.DELE(userInput[5:])
 
-        elif checkFunction == 'PORT':
-            sockPort = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sockPort.bind(('',0))
-            clientFTP.PORT(socket.gethostbyname(socket.gethostname()),sockPort.getsockname()[1])
+            elif checkFunction == 'PORT':
+                sockPort = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sockPort.bind(('', 0))
+                clientFTP.PORT(socket.gethostbyname(socket.gethostname()),sockPort.getsockname()[1])
 
-        elif checkFunction == 'PASV':
-            clientFTP.PASV()
+            elif checkFunction == 'PASV':
+                clientFTP.PASV()
 
-        elif checkFunction == 'RETR':
-            clientFTP.RETR(userInput[5:])
+            elif checkFunction == 'RETR':
+                clientFTP.RETR(userInput[5:])
 
-        elif checkFunction == 'STOR':
-            clientFTP.STOR(userInput[5:])
+            elif checkFunction == 'STOR':
+                clientFTP.STOR(userInput[5:])
         
-        elif checkFunction == 'NOOP':
-            clientFTP.NOOP()
+            elif checkFunction == 'NOOP':
+                clientFTP.NOOP()
 
-        elif checkFunction == 'QUIT':
-            clientFTP.QUIT()
+            elif checkFunction == 'QUIT':
+                clientFTP.QUIT()
+                break
+
+        except Exception, e:
+        
+            print 'An Error has occured: ', e 
             break
 
-    except Exception, e:
-        
-        print 'An Error has occured: ', e 
-        break
-#'''
+runCommands()
