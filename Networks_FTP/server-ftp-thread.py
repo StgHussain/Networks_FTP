@@ -2,10 +2,9 @@ import socket
 import threading
 import os
 import shutil
+import time
 
 Server_IP = '127.0.0.1'
-Server_Port = 8000
-sendPort = 8001
 currdir = os.path.abspath('.')
 
 class FTPserverThread(threading.Thread):
@@ -15,11 +14,11 @@ class FTPserverThread(threading.Thread):
     def __init__(self, (connection, addr)):
         self.connection = connection
         self.addr = addr
+        self.dataPort = 21
         self.basewd = currdir
         self.cwd = self.basewd
         self.rest = False
         self.pasv_mode = False
-        self.dataPort = 8005
 
         self.mode = 'I'
 
@@ -33,17 +32,18 @@ class FTPserverThread(threading.Thread):
             if not cmd:
                 break
             else:
-                print 'Recieved:', cmd
+                print 'Recieved: ', cmd
             try:
                 func = getattr(self, cmd[:4].strip().upper())
                 func(cmd)
             except Exception, e:
                 print 'ERROR:', e
                 # traceback.print_exc()
-                self.connection.send('500 Sorry')
+                self.connection.send('500')
 
     def SYST(self,cmd):
-        self.connection.send('221 Linux')  # change this to whatever system the actual server will be
+        system = os.environ
+        self.connection.send('211 ' + system)  # change this to whatever system the actual server will be
 
     def USER(self, userID):
         if userID == 'user':
@@ -62,35 +62,53 @@ class FTPserverThread(threading.Thread):
 
     def NOOP(self, cmd):
         self.connection.send('200 OK \n')
-        self.connection.send('x//')
 
     def CWD(self, cmd):
         chwd = cmd[4:]
         print 'directory', chwd
         check_Path = True
-        #check_Path = chwd.os.path.exists
-        if check_Path is True:
-            if chwd == '/':
-                self.cwd = self.basewd
-            elif chwd[0] == '/':
-                self.cwd = os.path.join(self.basewd, chwd[1:])
+        check_Path = chwd.os.path.exists
+        try:
+            if check_Path is True:
+                if chwd == '/':
+                    self.cwd = self.basewd
+                elif chwd[0] == '/':
+                    self.cwd = os.path.join(self.basewd, chwd[1:])
+                else:
+                    self.cwd = os.path.join(self.cwd, chwd)
+                os.chdir(chwd)
+                print chwd
+                self.connection.send('250 OK')
             else:
-                self.cwd = os.path.join(self.cwd, chwd)
-            os.chdir(chwd)
-            self.connection.send('250 OK' + "\r\n")
-        else:
-            self.connection.send('550 No such file, directory \n')
+                self.connection.send('550 No such file, directory \n')
+        except Exception, e:
+            print 'Error', e
+            self.connection.send('451 Error:')
 
     def LIST(self,cmd):
-        currPath = os.getcwd();
-        files = os.listdir(currPath)
-        for file in files:
-            self.connection.send('\r'+file)
+        self.connection.send('150 Directory listing:')
+        self.start_datasock()
+        listing = os.listdir('.')
+        for t in listing:
+            k = self.listItem(t)
+            self.datasock.send(k)
+        self.datasock.close()
+        self.connection.send('226 Directory sent')
+
+    def listItem(self, fileName):
+        st = os.stat(fileName)
+        fullmode = 'rwxrwxrwx'
+        mode = ''
+        for n in range (9):
+            mode +=((st.st_mode>>(8-n))&1) and fullmode[n] or '-'
+        d = (os.path.isdir(fileName)) and 'd' or '-'
+        lastMod = time.strftime(' %b %d %H:%M ', time.gmtime(st.st_mtime))
+        return d+mode+ '1 user group ' + str(st.st_size) + lastMod + os.path.basename(fileName)
 
     def PWD(self, cmd):
         cwd = os.getcwd()
-        print 'path', cwd
-        self.connnection.send('250 OK \r\n')
+        print cwd
+        self.connection.send('250 OK' + cwd + '\r\n')
 
     def DELE(self, cmd):
         filePath = cmd[5:]
@@ -98,7 +116,7 @@ class FTPserverThread(threading.Thread):
             os.remove(filePath)
         except Exception, e:
             print 'ERROR:', e
-            self.connection.send('500')
+            self.connection.send('550')
 
     def RMD(self, cmd):
         fileDirectory = cmd[4:]
@@ -111,15 +129,18 @@ class FTPserverThread(threading.Thread):
                 shutil.rmtree(fileDirectory)
             except Exception, e:
                 print 'Error', e
-            self.connection.send('500')
+            self.connection.send('550')
 
     def PORT(self, cmd):
         if self.pasv_mode:
             self.servsock.close()
             self.pasv_mode = False
-        newPort = cmd[5:]
+        newData = self.datasock.recv(1024)
+        port, newAddress, newPort = newData.split(",")
+        self.addr = newAddress
         self.dataPort = newPort
-        self.connection.send('200 Get Port .\r\n')
+        self.connection.send('200 Switched port')
+
 
     def TYPE(self, cmd):
         self.mode = cmd[5]
@@ -142,47 +163,35 @@ class FTPserverThread(threading.Thread):
         filepath = os.path.join(self.cwd, cmd[5:])
         try:
             filesize = os.path.getsize(filepath)
-            self.connection.send('221 File size ' + filesize)
+            self.connection.send('250 File size ' + filesize)
         except Exception, e:
             print 'Error', e
-            self.connection.send('450 Error ' + e)
+            self.connection.send('450')
 
     def RETR(self, cmd):
-        filePath = os.path.join(self.cwd, cmd[5:])
-        #file_exists = os.path.exists(filePath)
+        directory = os.getcwd()
+        filePath = os.path.join(directory, cmd[5:])
         file_exists = True
-        #self.connection.connect(('127.0.0.1', 8000))
-        if self.mode == 'I':
-            fileRead = open(filePath, 'rb')
-        else:
-            fileRead = open(filePath, 'r')
-        if file_exists is True:
-            self.datasock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.datasock.connect(('127.0.0.1', 8000))
-            self.start_datasock()
-            self.datasock.send('150')
+        print filePath
+        e = ''
+        #if self.mode == 'I':
+        fileRead = open(filePath, 'rb')
+        #else:
+        #    fileRead = open(filePath, 'r')
+        try:
+            if file_exists is True:
+                self.start_datasock()
+                while 1:
+                    data = fileRead.read(1024)
+                    if not data:
+                        break
+                    self.datasock.send(data)
+                fileRead.close()
+                self.stop_datasock()
+        except Exception, e:
+            self.connection.send('450')
+            print 'Error:', e
 
-            while 1:
-                data = fileRead.read(1024)
-                if not data:
-                    break
-                self.connection.send(data)
-            fileRead.close()
-            self.connection.close()
-            #self.datasock.close()
-
-    def start_datasock(self):
-        if self.pasv_mode:
-            self.socket, addr = self.servsock.accept()
-            print 'connect:', addr
-        else:
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.socket.connect((self.addr, self.dataPort))
-
-    def stop_datasock(self):
-        self.datasock.close()
-        if self.pasv_mode:
-            self.servsock.close()
 
     def STOR(self, cmd):
         filePath = os.path.join(self.cwd, cmd[5:-2])
@@ -201,10 +210,25 @@ class FTPserverThread(threading.Thread):
         self.stop_datasock()
         self.connection.send('226 Transfer complete')
 
+
+    def start_datasock(self):
+        if self.pasv_mode:
+            self.datasock, addr = self.servsock.accept()
+            print 'connect:', addr
+        else:
+            self.datasock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.datasock.connect((self.addr, self.dataPort))
+
+    def stop_datasock(self):
+        self.datasock.close()
+        if self.pasv_mode:
+            self.datasock.close()
+
+
 class FTPserver(threading.Thread):
     def __init__(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.bind((Server_IP, Server_Port))
+        self.socket.bind((Server_IP, self.dataPort))
         threading.Thread.__init__(self)
 
     def run(self):
@@ -221,6 +245,7 @@ if __name__ == '__main__':
     ftp = FTPserver()
     ftp.daemon = True
     ftp.start()
-    print 'Connection information', Server_IP, ':', Server_Port
+    portNum = 21
+    print 'Connection information', Server_IP, ':', portNum
     raw_input('Enter to end...\n')
     ftp.stop()
