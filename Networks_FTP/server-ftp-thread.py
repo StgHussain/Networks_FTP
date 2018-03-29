@@ -5,6 +5,7 @@ import shutil
 import time
 
 Server_IP = '127.0.0.1'
+Server_Port = 21
 currdir = os.path.abspath('.')
 
 class FTPserverThread(threading.Thread):
@@ -42,7 +43,7 @@ class FTPserverThread(threading.Thread):
                 self.connection.send('500')
 
     def SYST(self,cmd):
-        system = os.environ
+        system = os.name
         self.connection.send('211 ' + system)  # change this to whatever system the actual server will be
 
     def USER(self, userID):
@@ -132,14 +133,19 @@ class FTPserverThread(threading.Thread):
             self.connection.send('550')
 
     def PORT(self, cmd):
-        if self.pasv_mode:
-            self.servsock.close()
-            self.pasv_mode = False
-        newData = self.datasock.recv(1024)
-        port, newAddress, newPort = newData.split(",")
-        self.addr = newAddress
-        self.dataPort = newPort
+        print 'port comma'
+        #if self.pasv_mode == True:
+          #  self.servsock.close()
+         #   self.pasv_mode = False
+        l = cmd[5:].split(',')
+        print 'qqwe'
+        self.addr = '.'.join(l[:4])
+        self.dataPort = (int(l[4]) << 8) + int(l[5])
+        print 'zxczxc'
+        self.start_datasock()
+        print 'afsdasd'
         self.connection.send('200 Switched port')
+        print 'hehre'
 
 
     def TYPE(self, cmd):
@@ -228,7 +234,7 @@ class FTPserverThread(threading.Thread):
 class FTPserver(threading.Thread):
     def __init__(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.bind((Server_IP, self.dataPort))
+        self.socket.bind((Server_IP, Server_Port))
         threading.Thread.__init__(self)
 
     def run(self):
